@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import Discord, { Message, TextChannel  } from "discord.js";
+import Discord, { CollectorFilter, Message, MessageReaction, TextChannel, User  } from "discord.js";
 // import cron from 'node-cron';
 import { DISCORD_TOKEN, QUIZ_TOKEN } from './config/secrets';
 import axios, { AxiosResponse } from 'axios';
@@ -43,12 +43,12 @@ interface QuizResponse {
   },
   multiple_correct_answers: boolean;
   correct_answers: {
-    answer_a_correct: boolean;
-    answer_b_correct: boolean;
-    answer_c_correct: boolean;
-    answer_d_correct: boolean;
-    answer_e_correct: boolean;
-    answer_f_correct: boolean;
+    answer_a_correct: 'true' | 'false';
+    answer_b_correct: 'true' | 'false';
+    answer_c_correct: 'true' | 'false';
+    answer_d_correct: 'true' | 'false';
+    answer_e_correct: 'true' | 'false';
+    answer_f_correct: 'true' | 'false';
   },
   explanation: string;
   category: string;
@@ -79,14 +79,43 @@ interface QuizResponse {
       `**Quiz Time**\n${question.question}\n\n${answerStr}`,
     ) as Message;
   
-  [
-    '🇦',
-    '🇧',
-    '🇨',
-    '🇩',
-    '🇪',
-    '🇫',
-  ].slice(0, answer.length).forEach(reaction => message.react(reaction));
+  const reactId: Array<{ key: string, value: string }> = [
+    { key: 'answer_a' ,value: '🇦' },
+    { key: 'answer_b' ,value: '🇧' },
+    { key: 'answer_c' ,value: '🇨' },
+    { key: 'answer_d' ,value: '🇩' },
+    { key: 'answer_e' ,value: '🇪' },
+    { key: 'answer_f' ,value: '🇫' },
+  ].slice(0, answer.length);
+
+  reactId.forEach(reaction => message.react(reaction.value));
+
+  const filterReact: CollectorFilter = (reaction: MessageReaction, user: User) => {
+    return reactId.map(react => react.value).includes(reaction.emoji.name || '')
+    && !user.bot
+  }
+
+  const [correctAnswer] = Object
+    .entries(question.correct_answers)
+    .find(([, bool]) => bool === 'true') as [string, string];
+
+  message.awaitReactions(filterReact, { time: 15000 })
+    .then(async collection => {
+      if (collection.size === 0) {
+        await channel.send('Beep bop! No one answering... :(');
+        return;
+      }
+      const { value } = reactId.find(r => r.key === correctAnswer.slice(0, 8)) as { value: string };
+      const correctCollection = collection.find(react => react.emoji.name === value);
+      if (correctCollection) {
+        await correctCollection.users.fetch();
+        const winner = correctCollection.users.cache.filter(user => !user.bot).first();
+        channel.send(`@${winner?.username} Correct`)
+      } else {
+        channel.send(`No one answered correctly`);
+      }
+    })
+    .catch(console.error);
 })()
 
 // cron.schedule('0 21 * * *', async () => {
