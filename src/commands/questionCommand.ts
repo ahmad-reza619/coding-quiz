@@ -95,6 +95,7 @@ export class QuestionCommand implements Command {
             replyMessage.channel.send(`${winner} Correct`)
         } else {
             replyMessage.channel.send(`No one answered correctly`);
+
         }
         })
         .catch(console.error);
