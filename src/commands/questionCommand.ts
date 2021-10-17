@@ -84,7 +84,7 @@ export class QuestionCommand implements Command {
     replyMessage.awaitReactions(filterReact, { time: 15000 })
         .then(async collection => {
         if (collection.size === 0) {
-            await replyMessage.reply('Beep bop! No one answering... :(');
+            await replyMessage.channel.send('Beep bop! No one answering... :(');
             return;
         }
         const { value } = reactId.find(r => r.key === correctAnswer.slice(0, 8)) as { value: string };
@@ -92,9 +92,10 @@ export class QuestionCommand implements Command {
         if (correctCollection) {
             await correctCollection.users.fetch();
             const winner = correctCollection.users.cache.filter(user => !user.bot).first();
-            replyMessage.reply(`@${winner?.username} Correct`)
+            replyMessage.channel.send(`${winner} Correct`)
         } else {
-            replyMessage.reply(`No one answered correctly`);
+            replyMessage.channel.send(`No one answered correctly`);
+
         }
         })
         .catch(console.error);
