@@ -1,5 +1,5 @@
 import { Message } from "discord.js";
-import { GreetCommand, TimeCommand } from "./commands";
+import { QuestionCommand } from './commands';
 import Command from "./commands/commandInterface";
 import { CommandParser } from "./models/commandParser";
 
@@ -12,8 +12,7 @@ export default class CommandHandler {
   constructor(prefix: string) {
 
     const commandClasses = [
-      GreetCommand,
-      TimeCommand
+        QuestionCommand,
     ];
 
     this.commands = commandClasses.map(commandClass => new commandClass());
@@ -26,8 +25,6 @@ export default class CommandHandler {
       return;
     }
 
-    message.reply(`Hive Greeter recieved '${this.echoMessage(message)}' from ${message.author.tag}`);
-
     const commandParser = new CommandParser(message, this.prefix);
 
     const matchedCommand = this.commands.find(command => command.commandNames.includes(commandParser.parsedCommandName));
@@ -35,9 +32,7 @@ export default class CommandHandler {
     if (!matchedCommand) {
       await message.reply(`I don't recognize that command. Try !help.`);
     } else {
-      await matchedCommand.run(message).catch(error => {
-        message.reply(`'${this.echoMessage(message)}' failed because of ${error}`);
-      });
+      await matchedCommand.run(message).catch(console.error);
     }
   }
 
